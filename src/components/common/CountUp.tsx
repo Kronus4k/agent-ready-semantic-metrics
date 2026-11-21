@@ -5,7 +5,15 @@ import type { MetricFormat } from "@/data/metrics";
 import { formatValue } from "@/lib/semantic";
 
 /** Animates from the previous value to the new one. Final frame is the exact value. */
-export function CountUp({ value, format, className }: { value: number; format: MetricFormat; className?: string }) {
+export function CountUp({
+  value,
+  format,
+  className,
+}: {
+  value: number;
+  format: MetricFormat;
+  className?: string;
+}) {
   const reduce = useReducedMotion();
   const [display, setDisplay] = useState(reduce ? value : 0);
   const from = useRef(reduce ? value : 0);

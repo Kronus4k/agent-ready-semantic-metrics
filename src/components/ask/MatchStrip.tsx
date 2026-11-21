@@ -6,13 +6,19 @@ import { cn } from "@/lib/utils";
 export type MatchState = "match" | "mismatch" | "pending" | "unanswered";
 
 const copy: Record<MatchState, { title: string; body: string }> = {
-  match: { title: "Same number", body: "Dashboard tile and agent answer are identical, to the cent." },
-  mismatch: { title: "Numbers differ", body: "The two answers do not agree. Check which definition each one used." },
+  match: { title: "Passed", body: "Dashboard tile and agent answer are identical, to the cent." },
+  mismatch: {
+    title: "Numbers differ",
+    body: "The two answers do not agree. Check which definition each one used.",
+  },
   pending: { title: "Checking…", body: "Waiting for the agent to answer." },
-  unanswered: { title: "Nothing to compare", body: "The agent refused instead of guessing, so there is no number to check." },
+  unanswered: {
+    title: "Nothing to compare",
+    body: "The agent refused instead of guessing, so there is no number to check.",
+  },
 };
 
-export function MatchStrip({ state, detail }: { state: MatchState; detail?: string }) {
+export function MatchStrip({ state, detail }: { state: MatchState; detail?: string | undefined }) {
   const Icon = state === "match" ? CircleCheck : state === "pending" ? CircleDashed : CircleSlash;
   return (
     <motion.div
@@ -38,7 +44,12 @@ export function MatchStrip({ state, detail }: { state: MatchState; detail?: stri
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: "spring", stiffness: 400, damping: 22 }}
         >
-          <Icon className={cn("size-5", state === "pending" && "animate-spin [animation-duration:2.5s]")} />
+          <Icon
+            className={cn(
+              "size-5",
+              state === "pending" && "animate-spin [animation-duration:2.5s]",
+            )}
+          />
         </motion.span>
         Same number check · {copy[state].title}
       </div>

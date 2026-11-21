@@ -11,9 +11,16 @@ export const Route = createFileRoute("/lineage")({
   head: () => ({
     meta: [
       { title: "Lineage · Agent-ready semantic metrics" },
-      { name: "description", content: "Follow a metric from raw events through the data contract, models and semantic layer to the dashboard and the agent." },
+      {
+        name: "description",
+        content:
+          "Follow a metric from raw events through the data contract, models and semantic layer to the dashboard and the agent.",
+      },
       { property: "og:title", content: "Lineage · Agent-ready semantic metrics" },
-      { property: "og:description", content: "From raw events to one metric, read by both a dashboard and an AI agent." },
+      {
+        property: "og:description",
+        content: "From raw events to one metric, read by both a dashboard and an AI agent.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

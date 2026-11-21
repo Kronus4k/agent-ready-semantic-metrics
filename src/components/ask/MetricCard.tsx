@@ -18,7 +18,16 @@ interface Props {
   footer?: ReactNode;
 }
 
-export function MetricCard({ title, icon: Icon, source, metric, reading, state, emptyText, footer }: Props) {
+export function MetricCard({
+  title,
+  icon: Icon,
+  source,
+  metric,
+  reading,
+  state,
+  emptyText,
+  footer,
+}: Props) {
   return (
     <div className="surface surface-interactive flex min-h-[300px] flex-col p-6">
       <div className="flex items-center justify-between">
@@ -72,12 +81,18 @@ export function MetricCard({ title, icon: Icon, source, metric, reading, state, 
             className="mt-8 flex flex-1 flex-col justify-center"
           >
             <div className="num text-5xl font-semibold text-border-strong">—</div>
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">{emptyText}</p>
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
+              {emptyText}
+            </p>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {footer && <div className="mt-5 border-t border-border pt-4 text-[13px] leading-relaxed text-muted-foreground">{footer}</div>}
+      {footer && (
+        <div className="mt-5 border-t border-border pt-4 text-[13px] leading-relaxed text-muted-foreground">
+          {footer}
+        </div>
+      )}
     </div>
   );
 }

@@ -10,7 +10,13 @@ import { FadeIn } from "@/components/common/FadeIn";
 import { PageHeader } from "@/components/common/PageHeader";
 import { dataset } from "@/data/dataset";
 import { exampleQuestions, getMetric } from "@/data/metrics";
-import { agentAnswer, dashboardTile, formatValue, resolveQuestion } from "@/lib/semantic";
+import {
+  agentAnswer,
+  dashboardTile,
+  formatValue,
+  resolveQuestion,
+  resolveWithReason,
+} from "@/lib/semantic";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -18,10 +24,14 @@ export const Route = createFileRoute("/")({
       { title: "Ask the agent · Agent-ready semantic metrics" },
       {
         name: "description",
-        content: "Ask a question and see the dashboard tile and the AI agent return the exact same number from one metric definition.",
+        content:
+          "Ask a question and see the dashboard tile and the AI agent return the exact same number from one metric definition.",
       },
       { property: "og:title", content: "Ask the agent · Agent-ready semantic metrics" },
-      { property: "og:description", content: "Metrics that people and AI agents read the same way." },
+      {
+        property: "og:description",
+        content: "Metrics that people and AI agents read the same way.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -37,9 +47,12 @@ function AskPage() {
   const [thinking, setThinking] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => () => {
-    if (timer.current) clearTimeout(timer.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
 
   function ask(q: string) {
     setAsked(q);
@@ -49,6 +62,7 @@ function AskPage() {
   }
 
   const resolved = resolveQuestion(asked);
+  const reason = resolveWithReason(asked);
   const lastMetric = useRef(resolved ?? getMetric("net_revenue")!);
   if (resolved) lastMetric.current = resolved;
   const metric = lastMetric.current;
@@ -67,12 +81,18 @@ function AskPage() {
   return (
     <div>
       <PageHeader eyebrow="Ask the agent" title="One definition, one number.">
-        Ask a business question. The agent maps it to a metric in the catalog and runs the same query the dashboard
-        uses, so both always agree.
+        Ask a business question. The agent maps it to a metric in the catalog and runs the same
+        query the dashboard uses, so both always agree.
       </PageHeader>
 
       <FadeIn delay={0.05}>
-        <QuestionInput value={input} onChange={setInput} onSubmit={ask} examples={exampleQuestions} activeQuestion={asked} />
+        <QuestionInput
+          value={input}
+          onChange={setInput}
+          onSubmit={ask}
+          examples={exampleQuestions}
+          activeQuestion={asked}
+        />
       </FadeIn>
 
       <div className="mt-10 grid gap-4 md:grid-cols-2">
@@ -100,7 +120,15 @@ function AskPage() {
               answer && resolved ? (
                 <>
                   “{resolved.label} for the {dataset.periodLabel.split(" · ")[0]?.toLowerCase()} was{" "}
-                  <span className="num font-medium text-foreground">{formatValue(answer.value, resolved.format)}</span>.”
+                  <span className="num font-medium text-foreground">
+                    {formatValue(answer.value, resolved.format)}
+                  </span>
+                  .”
+                  {reason && (
+                    <span className="mt-1 block font-mono text-[11.5px]">
+                      matched “{reason.matched}” → {resolved.id}
+                    </span>
+                  )}
                 </>
               ) : thinking ? (
                 "Resolving question to a catalog metric…"

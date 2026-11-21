@@ -1,7 +1,7 @@
 import { ChevronRight } from "lucide-react";
 
 import { TestsBadge } from "@/components/common/TestList";
-import type { Metric } from "@/data/metrics";
+import { runTests, type Metric } from "@/data/metrics";
 
 export function MetricTable({ rows, onSelect }: { rows: Metric[]; onSelect: (m: Metric) => void }) {
   return (
@@ -30,12 +30,18 @@ export function MetricTable({ rows, onSelect }: { rows: Metric[]; onSelect: (m: 
                   <div className="font-mono text-[13px] font-medium text-foreground">{m.id}</div>
                   <div className="mt-0.5 text-xs text-muted-foreground">{m.label}</div>
                 </td>
-                <td className="max-w-[260px] px-5 py-4 align-top text-muted-foreground">{m.description}</td>
+                <td className="max-w-[260px] px-5 py-4 align-top text-muted-foreground">
+                  {m.description}
+                </td>
                 <td className="px-5 py-4 align-top text-foreground">{m.grain}</td>
-                <td className="px-5 py-4 align-top font-mono text-[12.5px] text-muted-foreground">{m.denominator ?? "—"}</td>
-                <td className="px-5 py-4 align-top font-mono text-[12.5px] text-muted-foreground">{m.owner}</td>
+                <td className="px-5 py-4 align-top font-mono text-[12.5px] text-muted-foreground">
+                  {m.denominator ?? "—"}
+                </td>
+                <td className="px-5 py-4 align-top font-mono text-[12.5px] text-muted-foreground">
+                  {m.owner}
+                </td>
                 <td className="px-5 py-4 align-top">
-                  <TestsBadge tests={m.tests} />
+                  <TestsBadge tests={runTests(m)} />
                 </td>
                 <td className="px-3 py-4 align-top">
                   <ChevronRight className="size-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />

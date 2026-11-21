@@ -1,4 +1,6 @@
 import type { LucideIcon } from "lucide-react";
+
+import { getMetric, runTests } from "./metrics";
 import { Bot, Database, FileCheck2, Filter, LayoutDashboard, Sigma, Table2 } from "lucide-react";
 
 export interface LineageNode {
@@ -20,7 +22,8 @@ export const lineageNodes: LineageNode[] = [
     name: "raw.shop_events",
     icon: Database,
     stage: "source",
-    description: "Append-only order and payment events landed from the shop backend every 15 minutes.",
+    description:
+      "Append-only order and payment events landed from the shop backend every 15 minutes.",
     details: [
       { label: "Source", value: "Shop backend → object storage" },
       { label: "Volume", value: "≈ 1.2M events / day" },
@@ -34,7 +37,8 @@ export const lineageNodes: LineageNode[] = [
     name: "contracts/orders.v3.yml",
     icon: FileCheck2,
     stage: "contract",
-    description: "The producer promises field names, types and meanings. Breaking changes need a new version.",
+    description:
+      "The producer promises field names, types and meanings. Breaking changes need a new version.",
     details: [
       { label: "Version", value: "v3 (since 2026-06-01)" },
       { label: "Guarantees", value: "order_id unique · amounts in minor units · UTC timestamps" },
@@ -48,7 +52,8 @@ export const lineageNodes: LineageNode[] = [
     name: "stg_orders",
     icon: Filter,
     stage: "model",
-    description: "Renames, casts and de-duplicates events into one clean row per order state change.",
+    description:
+      "Renames, casts and de-duplicates events into one clean row per order state change.",
     details: [
       { label: "Materialisation", value: "view" },
       { label: "Grain", value: "One row per order event" },
@@ -62,7 +67,8 @@ export const lineageNodes: LineageNode[] = [
     name: "fct_orders",
     icon: Table2,
     stage: "model",
-    description: "Latest state of every order with payments pre-aggregated, so joins never fan out.",
+    description:
+      "Latest state of every order with payments pre-aggregated, so joins never fan out.",
     details: [
       { label: "Materialisation", value: "incremental table" },
       { label: "Grain", value: "One row per order" },
@@ -76,13 +82,20 @@ export const lineageNodes: LineageNode[] = [
     name: "metric: net_revenue",
     icon: Sigma,
     stage: "metric",
-    description: "The single written definition. Filters, time zone and grain live here and nowhere else.",
+    description:
+      "The single written definition. Filters, time zone and grain live here and nowhere else.",
     details: [
       { label: "Layer", value: "Semantic layer" },
       { label: "Time zone", value: "UTC" },
       { label: "Owner", value: "finance-analytics" },
     ],
-    checks: ["Definition reviewed", "4 of 4 tests passing"],
+    checks: (() => {
+      const results = runTests(getMetric("net_revenue")!);
+      return [
+        "Definition reviewed",
+        `${results.filter((r) => r.passed).length} of ${results.length} checks passing on today's data`,
+      ];
+    })(),
   },
   {
     id: "dashboard",
@@ -103,7 +116,8 @@ export const lineageNodes: LineageNode[] = [
     name: "agent.tools.query_metric",
     icon: Bot,
     stage: "output",
-    description: "The agent maps the question to a catalog metric and calls the same query. It may not invent SQL.",
+    description:
+      "The agent maps the question to a catalog metric and calls the same query. It may not invent SQL.",
     details: [
       { label: "Tool", value: "query_metric(name, period)" },
       { label: "Fallback", value: "Refuses when no metric matches" },

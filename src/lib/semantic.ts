@@ -13,15 +13,26 @@ export function metricSeries(id: string, ds: Dataset = defaultDataset): number[]
   return metric ? metric.series(ds) : [];
 }
 
-/** Map a free-text question to a catalog metric. Longest matching synonym wins. */
-export function resolveQuestion(question: string): Metric | null {
+export interface Resolution {
+  metric: Metric;
+  /** The catalog phrase that matched the question */
+  matched: string;
+}
+
+/** Map a free-text question to a catalog metric. Longest matching synonym wins; no match means no answer. */
+export function resolveWithReason(question: string): Resolution | null {
   const q = question.toLowerCase();
-  let best: { metric: Metric; score: number } | null = null;
+  let best: Resolution | null = null;
   for (const metric of metrics) {
-    const score = metric.synonyms.reduce((acc, s) => (q.includes(s) ? Math.max(acc, s.length) : acc), 0);
-    if (score > 0 && (!best || score > best.score)) best = { metric, score };
+    for (const s of metric.synonyms) {
+      if (q.includes(s) && (!best || s.length > best.matched.length)) best = { metric, matched: s };
+    }
   }
-  return best?.metric ?? null;
+  return best;
+}
+
+export function resolveQuestion(question: string): Metric | null {
+  return resolveWithReason(question)?.metric ?? null;
 }
 
 export interface MetricReading {
@@ -39,10 +50,18 @@ export function dashboardTile(metricId: string, ds: Dataset = defaultDataset): M
 export function agentAnswer(question: string, ds: Dataset = defaultDataset): MetricReading | null {
   const metric = resolveQuestion(question);
   if (!metric) return null;
-  return { metricId: metric.id, value: computeMetric(metric.id, ds), series: metricSeries(metric.id, ds) };
+  return {
+    metricId: metric.id,
+    value: computeMetric(metric.id, ds),
+    series: metricSeries(metric.id, ds),
+  };
 }
 
-export function formatValue(value: number, format: MetricFormat, opts: { compact?: boolean } = {}): string {
+export function formatValue(
+  value: number,
+  format: MetricFormat,
+  opts: { compact?: boolean } = {},
+): string {
   if (format === "currency") {
     return new Intl.NumberFormat("en-US", {
       style: "currency",

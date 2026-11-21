@@ -1,12 +1,23 @@
-import type { Dataset } from "./dataset";
+import { dataset as defaultDataset, type Dataset } from "./dataset";
 
 export type MetricFormat = "currency" | "percent" | "number";
 
+export type TestKind =
+  "not_null" | "unique" | "accepted_range" | "reconciliation" | "freshness" | "relationship";
+
+/** A test result. Never typed by hand: produced by running a check against the dataset. */
 export interface MetricTest {
   name: string;
-  kind: "not_null" | "unique" | "accepted_range" | "reconciliation" | "freshness" | "relationship";
+  kind: TestKind;
   passed: boolean;
   detail: string;
+}
+
+/** A check that runs against the data every time the app (or CI) loads. */
+export interface MetricCheck {
+  name: string;
+  kind: TestKind;
+  run: (ds: Dataset) => { passed: boolean; detail: string };
 }
 
 /** One written definition per metric. Dashboard and agent both read this, nothing else. */
@@ -22,7 +33,7 @@ export interface Metric {
   filters: string[];
   format: MetricFormat;
   sql: string;
-  tests: MetricTest[];
+  checks: MetricCheck[];
   /** Phrases the agent uses to map a question to this metric */
   synonyms: string[];
   /** Aggregate value for the reporting period */
@@ -32,6 +43,38 @@ export interface Metric {
 }
 
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
+const mean = (xs: number[]) => (xs.length ? sum(xs) / xs.length : 0);
+const int = (n: number) => new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(n);
+const usd = (n: number) =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+  }).format(n);
+const pct = (n: number, d = 2) => `${(n * 100).toFixed(d)}%`;
+const DAY = 86_400_000;
+
+const netRevenue = (ds: Dataset) =>
+  sum(ds.daily.map((d) => d.grossRevenue)) - sum(ds.daily.map((d) => d.refunds));
+const totalOrders = (ds: Dataset) => sum(ds.daily.map((d) => d.orders));
+const totalSessions = (ds: Dataset) => sum(ds.daily.map((d) => d.sessions));
+
+/** Shared check: the daily table has exactly one row per day, with no gaps. */
+const dailySpine: MetricCheck = {
+  name: "one row per day, no gaps",
+  kind: "unique",
+  run: (ds) => {
+    const dates = ds.daily.map((d) => d.date);
+    const unique = new Set(dates).size === dates.length;
+    const gaps = ds.daily
+      .slice(1)
+      .filter((d, i) => Date.parse(d.date) - Date.parse(ds.daily[i]!.date) !== DAY).length;
+    return {
+      passed: unique && gaps === 0,
+      detail: `${dates.length} days, ${dates.length - new Set(dates).size} duplicates, ${gaps} gaps`,
+    };
+  },
+};
 
 export const metrics: Metric[] = [
   {
@@ -54,11 +97,28 @@ where o.status = 'completed'
   and o.is_test_order = false
   and o.ordered_at_utc >= {{ period_start }}
   and o.ordered_at_utc <  {{ period_end }}`,
-    tests: [
-      { name: "order_id is unique", kind: "unique", passed: true, detail: "0 duplicate keys in fct_orders" },
-      { name: "gross_amount_usd not null", kind: "not_null", passed: true, detail: "0 nulls" },
-      { name: "reconciles with payments ledger", kind: "reconciliation", passed: true, detail: "Δ 0.00% vs ledger" },
-      { name: "loaded within 6h", kind: "freshness", passed: true, detail: "Last load 41 min ago" },
+    checks: [
+      dailySpine,
+      {
+        name: "refunds never exceed gross",
+        kind: "accepted_range",
+        run: (ds) => {
+          const bad = ds.daily.filter((d) => d.refunds > d.grossRevenue || d.refunds < 0).length;
+          return { passed: bad === 0, detail: `${bad} of ${ds.daily.length} days out of range` };
+        },
+      },
+      {
+        name: "reconciles with daily totals",
+        kind: "reconciliation",
+        run: (ds) => {
+          const byDay = sum(ds.daily.map((d) => d.grossRevenue - d.refunds));
+          const diff = Math.abs(byDay - netRevenue(ds));
+          return {
+            passed: diff < 0.01,
+            detail: `Δ ${usd(diff)} between day-level and period totals`,
+          };
+        },
+      },
     ],
     synonyms: ["net revenue", "revenue", "sales", "income", "turnover"],
     compute: (ds) => sum(ds.daily.map((d) => d.grossRevenue - d.refunds)),
@@ -68,7 +128,8 @@ where o.status = 'completed'
     id: "orders",
     label: "Orders",
     description: "Count of completed, non-test orders.",
-    definition: "Count of distinct order_id with status = 'completed', on the day the order was placed.",
+    definition:
+      "Count of distinct order_id with status = 'completed', on the day the order was placed.",
     grain: "One row per order",
     denominator: null,
     owner: "commerce-analytics",
@@ -83,10 +144,27 @@ where o.status = 'completed'
   and o.is_test_order = false
   and o.ordered_at_utc >= {{ period_start }}
   and o.ordered_at_utc <  {{ period_end }}`,
-    tests: [
-      { name: "order_id is unique", kind: "unique", passed: true, detail: "0 duplicate keys" },
-      { name: "customer_id references dim_customers", kind: "relationship", passed: true, detail: "0 orphans" },
-      { name: "loaded within 6h", kind: "freshness", passed: true, detail: "Last load 41 min ago" },
+    checks: [
+      dailySpine,
+      {
+        name: "orders never exceed sessions",
+        kind: "accepted_range",
+        run: (ds) => {
+          const bad = ds.daily.filter((d) => d.orders > d.sessions || d.orders < 0).length;
+          return { passed: bad === 0, detail: `${bad} of ${ds.daily.length} days out of range` };
+        },
+      },
+      {
+        name: "counts are whole numbers",
+        kind: "not_null",
+        run: (ds) => {
+          const bad = ds.daily.filter((d) => !Number.isInteger(d.orders)).length;
+          return {
+            passed: bad === 0,
+            detail: `${int(totalOrders(ds))} orders, ${bad} invalid values`,
+          };
+        },
+      },
     ],
     synonyms: ["how many orders", "number of orders", "order count", "orders"],
     compute: (ds) => sum(ds.daily.map((d) => d.orders)),
@@ -96,7 +174,8 @@ where o.status = 'completed'
     id: "average_order_value",
     label: "Average order value",
     description: "Net revenue divided by completed orders.",
-    definition: "net_revenue / orders over the same period and filters. Ratio of sums, never an average of daily averages.",
+    definition:
+      "net_revenue / orders over the same period and filters. Ratio of sums, never an average of daily averages.",
     grain: "Period",
     denominator: "orders",
     owner: "commerce-analytics",
@@ -107,10 +186,32 @@ where o.status = 'completed'
 select
   {{ metric('net_revenue') }} / nullif({{ metric('orders') }}, 0)
     as average_order_value`,
-    tests: [
-      { name: "denominator > 0", kind: "accepted_range", passed: true, detail: "orders = 10,000+ in period" },
-      { name: "value between $10 and $500", kind: "accepted_range", passed: true, detail: "Within range" },
-      { name: "inputs reconcile", kind: "reconciliation", passed: true, detail: "Built from certified metrics" },
+    checks: [
+      {
+        name: "denominator > 0",
+        kind: "accepted_range",
+        run: (ds) => ({ passed: totalOrders(ds) > 0, detail: `orders = ${int(totalOrders(ds))}` }),
+      },
+      {
+        name: "equals net_revenue / orders",
+        kind: "reconciliation",
+        run: (ds) => {
+          const value = netRevenue(ds) / totalOrders(ds);
+          const naive = mean(ds.daily.map((d) => (d.grossRevenue - d.refunds) / d.orders));
+          return {
+            passed: Number.isFinite(value),
+            detail: `${usd(value)}; an average of daily averages would say ${usd(naive)}`,
+          };
+        },
+      },
+      {
+        name: "value between $10 and $500",
+        kind: "accepted_range",
+        run: (ds) => {
+          const v = netRevenue(ds) / totalOrders(ds);
+          return { passed: v >= 10 && v <= 500, detail: usd(v) };
+        },
+      },
     ],
     synonyms: ["average order value", "aov", "basket size", "order value", "average basket"],
     compute: (ds) => {
@@ -124,7 +225,8 @@ select
     id: "conversion_rate",
     label: "Conversion rate",
     description: "Share of sessions that end in a completed order.",
-    definition: "orders / sessions over the same period. Sessions exclude bots and internal traffic.",
+    definition:
+      "orders / sessions over the same period. Sessions exclude bots and internal traffic.",
     grain: "Period",
     denominator: "sessions",
     owner: "growth-analytics",
@@ -140,10 +242,32 @@ where s.is_bot = false
   and s.is_internal = false
   and s.started_at_utc >= {{ period_start }}
   and s.started_at_utc <  {{ period_end }}`,
-    tests: [
-      { name: "session_id is unique", kind: "unique", passed: true, detail: "0 duplicate keys" },
-      { name: "value between 0 and 1", kind: "accepted_range", passed: true, detail: "Within range" },
-      { name: "bot filter applied", kind: "accepted_range", passed: true, detail: "0 bot sessions in input" },
+    checks: [
+      {
+        name: "denominator > 0",
+        kind: "accepted_range",
+        run: (ds) => ({
+          passed: totalSessions(ds) > 0,
+          detail: `sessions = ${int(totalSessions(ds))}`,
+        }),
+      },
+      {
+        name: "value between 0 and 1",
+        kind: "accepted_range",
+        run: (ds) => {
+          const v = totalOrders(ds) / totalSessions(ds);
+          return { passed: v >= 0 && v <= 1, detail: pct(v, 3) };
+        },
+      },
+      {
+        name: "ratio of sums, not mean of daily rates",
+        kind: "reconciliation",
+        run: (ds) => {
+          const v = totalOrders(ds) / totalSessions(ds);
+          const naive = mean(ds.daily.map((d) => d.orders / d.sessions));
+          return { passed: Number.isFinite(v), detail: `${pct(v, 3)} vs naive ${pct(naive, 3)}` };
+        },
+      },
     ],
     synonyms: ["conversion rate", "conversion", "convert", "converting"],
     compute: (ds) => {
@@ -171,13 +295,50 @@ select
 from {{ ref('mart_retention_cohorts') }} as c  -- one row per cohort, zeros included
 where c.cohort_week >= {{ period_start }} - interval '12 weeks'
   and c.is_matured = true`,
-    tests: [
-      { name: "one row per cohort", kind: "unique", passed: true, detail: "8 cohorts, 8 rows" },
-      { name: "zero rows present", kind: "reconciliation", passed: true, detail: "Spine joined, no gaps" },
-      { name: "value between 0 and 1", kind: "accepted_range", passed: true, detail: "Within range" },
+    checks: [
+      {
+        name: "one row per cohort, no missing weeks",
+        kind: "unique",
+        run: (ds) => {
+          const weeks = ds.cohorts.map((c) => c.cohort);
+          const gaps = ds.cohorts
+            .slice(1)
+            .filter(
+              (c, i) => Date.parse(c.cohort) - Date.parse(ds.cohorts[i]!.cohort) !== 7 * DAY,
+            ).length;
+          const dupes = weeks.length - new Set(weeks).size;
+          return {
+            passed: gaps === 0 && dupes === 0,
+            detail: `${weeks.length} cohorts, ${dupes} duplicates, ${gaps} gaps`,
+          };
+        },
+      },
+      {
+        name: "retained never exceeds cohort size",
+        kind: "accepted_range",
+        run: (ds) => {
+          const bad = ds.cohorts.filter(
+            (c) => c.retainedD30 > c.customers || c.retainedD30 < 0,
+          ).length;
+          return {
+            passed: bad === 0,
+            detail: `${bad} of ${ds.cohorts.length} cohorts out of range`,
+          };
+        },
+      },
+      {
+        name: "value between 0 and 1",
+        kind: "accepted_range",
+        run: (ds) => {
+          const v =
+            sum(ds.cohorts.map((c) => c.retainedD30)) / sum(ds.cohorts.map((c) => c.customers));
+          return { passed: v >= 0 && v <= 1, detail: pct(v) };
+        },
+      },
     ],
     synonyms: ["retention", "retain", "come back", "returning", "repeat"],
-    compute: (ds) => sum(ds.cohorts.map((c) => c.retainedD30)) / sum(ds.cohorts.map((c) => c.customers)),
+    compute: (ds) =>
+      sum(ds.cohorts.map((c) => c.retainedD30)) / sum(ds.cohorts.map((c) => c.customers)),
     series: (ds) => ds.cohorts.map((c) => c.retainedD30 / c.customers),
   },
 ];
@@ -188,6 +349,11 @@ export const exampleQuestions: string[] = [
   "What's the conversion rate from sessions?",
   "What share of new customers come back within 30 days?",
 ];
+
+/** Run every check of a metric against the data. This is what the UI shows and what CI asserts. */
+export function runTests(metric: Metric, ds: Dataset = defaultDataset): MetricTest[] {
+  return metric.checks.map((c) => ({ name: c.name, kind: c.kind, ...c.run(ds) }));
+}
 
 export function getMetric(id: string): Metric | undefined {
   return metrics.find((m) => m.id === id);

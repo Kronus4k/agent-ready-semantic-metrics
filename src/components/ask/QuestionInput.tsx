@@ -17,7 +17,8 @@ export function QuestionInput({ value, onChange, onSubmit, examples, activeQuest
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const t = e.target as HTMLElement | null;
-      const typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+      const typing =
+        t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
       if (e.key === "/" && !typing) {
         e.preventDefault();
         ref.current?.focus();

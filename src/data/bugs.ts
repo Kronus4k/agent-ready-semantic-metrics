@@ -66,6 +66,14 @@ export interface BugCase {
   wrongValue: number;
   correctSql: string;
   buggySql: string;
+  /** Where this bug was caught for real, with the measured numbers. */
+  inProduction: {
+    project: string;
+    url: string;
+    correct: string;
+    wrong: string;
+    story: string;
+  };
 }
 
 export const bugCases: BugCase[] = [
@@ -75,7 +83,8 @@ export const bugCases: BugCase[] = [
     metricLabel: "Revenue, 8 sample orders",
     metricId: "net_revenue",
     format: "currency",
-    summary: "Joining order_items and payments on order_id multiplies every payment by the number of items.",
+    summary:
+      "Joining order_items and payments on order_id multiplies every payment by the number of items.",
     whyItBreaks:
       "An order with 5 items and 2 payments produces 10 rows. Summing payment amounts over those rows counts each payment 5 times.",
     correctValue: revenueCorrect(sampleOrders),
@@ -91,6 +100,14 @@ join payments p using (order_id)`,
 from orders o
 join order_items i using (order_id)  -- n items
 join payments p using (order_id)     -- × m payments`,
+    inProduction: {
+      project: "Slussen",
+      url: "https://github.com/Kronus4k/slussen",
+      correct: "17/17 Gold metrics tied out",
+      wrong: "Item value +4.5%",
+      story:
+        "In Slussen, a governed Snowflake platform on the public Olist dataset (99,441 orders), a naive items × payments join inflated item value by 4.5%. No test failed. The fix was one payment row per order, then a tie-out of every Gold metric.",
+    },
   },
   {
     id: "missing-zeros",
@@ -98,7 +115,8 @@ join payments p using (order_id)     -- × m payments`,
     metricLabel: "Week-4 retention, 6 cohorts",
     metricId: "d30_retention",
     format: "percent",
-    summary: "The mart is built from activity events, so cohorts with nobody active in week 4 have no row at all.",
+    summary:
+      "The mart is built from activity events, so cohorts with nobody active in week 4 have no row at all.",
     whyItBreaks:
       "Three cohorts had zero actives. Without a date spine their customers drop out of the denominator and retention looks almost twice as good.",
     correctValue: retentionCorrect(sampleCohorts),
@@ -109,7 +127,15 @@ from cohorts c                       -- spine: every cohort
 left join week4_activity a using (cohort)`,
     buggySql: `select sum(a.active)::numeric
        / sum(c.customers) as retention
-from week4_activity a                -- only rows with activity
+from week4_activity a      -- activity rows only
 join cohorts c using (cohort)`,
+    inProduction: {
+      project: "Slussen",
+      url: "https://github.com/Kronus4k/slussen",
+      correct: "Month-1 retention 0.47%",
+      wrong: "13.48%",
+      story:
+        "In Slussen, the retention mart had no rows for months without returning customers, so month-1 retention read 13.48% instead of the true 0.47%. A dense cohort grid (1,373 rows, 755 of them zeros) fixed it.",
+    },
   },
 ];

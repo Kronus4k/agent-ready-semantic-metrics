@@ -73,7 +73,10 @@ function TopBar() {
           <ThemeToggle />
         </div>
       </div>
-      <nav className="scrollbar-none flex gap-1 overflow-x-auto px-4 pb-2 sm:px-6 lg:hidden" aria-label="Main">
+      <nav
+        className="scrollbar-none flex gap-1 overflow-x-auto px-4 pb-2 sm:px-6 lg:hidden"
+        aria-label="Main"
+      >
         {navItems.map((item) => {
           const active = isActive(item.to);
           return (
@@ -82,7 +85,9 @@ function TopBar() {
               to={item.to}
               className={cn(
                 "flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors",
-                active ? "bg-accent font-medium text-accent-foreground" : "text-muted-foreground hover:text-foreground",
+                active
+                  ? "bg-accent font-medium text-accent-foreground"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
               <item.icon className="size-3.5" strokeWidth={1.75} />

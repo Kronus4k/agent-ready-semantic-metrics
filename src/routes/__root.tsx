@@ -84,7 +84,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "Metrics that people and AI agents read the same way." },
       { name: "author", content: "Agent-ready semantic metrics" },
       { property: "og:title", content: "Agent-ready semantic metrics" },
-      { property: "og:description", content: "Metrics that people and AI agents read the same way." },
+      {
+        property: "og:description",
+        content: "Metrics that people and AI agents read the same way.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

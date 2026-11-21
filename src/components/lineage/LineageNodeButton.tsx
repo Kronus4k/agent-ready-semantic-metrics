@@ -17,7 +17,7 @@ export function LineageNodeButton({
       onClick={() => onSelect(node.id)}
       aria-pressed={active}
       className={cn(
-        "w-40 shrink-0 rounded-2xl border bg-card p-4 text-left transition-all duration-200",
+        "w-[8.5rem] shrink-0 rounded-2xl border bg-card p-3.5 text-left transition-all duration-200",
         active
           ? "border-primary bg-accent ring-4 ring-ring/15"
           : "border-border hover:-translate-y-0.5 hover:border-border-strong",

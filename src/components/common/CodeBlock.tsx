@@ -16,17 +16,50 @@ function highlightLine(line: string): ReactNode[] {
   const parts = code.split(/('[^']*'|\{\{[^}]*\}\}|\b\d+(?:\.\d+)?\b|\b[a-z_]+\b)/gi);
   const out: ReactNode[] = parts.map((p, i) => {
     if (!p) return null;
-    if (p.startsWith("'")) return <span key={i} className="text-code-string">{p}</span>;
-    if (p.startsWith("{{")) return <span key={i} className="text-accent-foreground">{p}</span>;
-    if (/^\d/.test(p)) return <span key={i} className="text-code-number">{p}</span>;
-    if (KEYWORDS.has(p.toLowerCase())) return <span key={i} className="text-code-keyword">{p}</span>;
+    if (p.startsWith("'"))
+      return (
+        <span key={i} className="text-code-string">
+          {p}
+        </span>
+      );
+    if (p.startsWith("{{"))
+      return (
+        <span key={i} className="text-accent-foreground">
+          {p}
+        </span>
+      );
+    if (/^\d/.test(p))
+      return (
+        <span key={i} className="text-code-number">
+          {p}
+        </span>
+      );
+    if (KEYWORDS.has(p.toLowerCase()))
+      return (
+        <span key={i} className="text-code-keyword">
+          {p}
+        </span>
+      );
     return p;
   });
-  if (comment) out.push(<span key="c" className="text-code-comment">{comment}</span>);
+  if (comment)
+    out.push(
+      <span key="c" className="text-code-comment">
+        {comment}
+      </span>,
+    );
   return out;
 }
 
-export function CodeBlock({ code, label = "SQL", tone = "default" }: { code: string; label?: string; tone?: "default" | "danger" }) {
+export function CodeBlock({
+  code,
+  label = "SQL",
+  tone = "default",
+}: {
+  code: string;
+  label?: string;
+  tone?: "default" | "danger";
+}) {
   const [copied, setCopied] = useState(false);
   return (
     <div
@@ -36,7 +69,12 @@ export function CodeBlock({ code, label = "SQL", tone = "default" }: { code: str
       )}
     >
       <div className="flex items-center justify-between border-b border-border px-4 py-2">
-        <span className={cn("font-mono text-[11px]", tone === "danger" ? "text-destructive" : "text-muted-foreground")}>
+        <span
+          className={cn(
+            "font-mono text-[11px]",
+            tone === "danger" ? "text-destructive" : "text-muted-foreground",
+          )}
+        >
           {label}
         </span>
         <button
