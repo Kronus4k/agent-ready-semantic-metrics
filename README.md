@@ -12,7 +12,7 @@ This app shows the fix in four pages: write every metric down once, test it agai
 
 | Page | What it shows |
 | --- | --- |
-| Ask the agent | Ask a question. A rule-based agent maps it to a metric in the catalog and shows which phrase it matched. The dashboard tile and the agent answer sit side by side with a same number check. If no metric matches, the agent refuses instead of guessing. |
+| Ask the agent | Ask a question. A rule-based agent maps it to a metric in the catalog and shows which phrase it matched. The dashboard tile and the agent answer sit side by side with a same number check. If no metric matches, the agent refuses instead of guessing. A card below shows the same check on real data in Slussen: Cortex Analyst and Power BI both returned GMV 409,522.85 for the Norte analyst. |
 | Metric catalog | Every metric as a contract: definition, grain, denominator, filters, time zone, owner, SQL and tests. |
 | Bug lab | Two modelling bugs you can switch on: a fan-out join and a retention mart without zero rows. Each card shows the size of the error and the real numbers from when I caught the same bug in [Slussen](https://github.com/Kronus4k/slussen). |
 | Lineage | From raw events through the data contract, staging and fact models to the metric, then out to the dashboard tile and the agent answer. |

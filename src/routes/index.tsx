@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { ComputationPanel } from "@/components/ask/ComputationPanel";
 import { MatchStrip, type MatchState } from "@/components/ask/MatchStrip";
 import { MetricCard } from "@/components/ask/MetricCard";
+import { ProofCard } from "@/components/ask/ProofCard";
 import { QuestionInput } from "@/components/ask/QuestionInput";
 import { FadeIn } from "@/components/common/FadeIn";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -151,7 +152,11 @@ function AskPage() {
         />
       </FadeIn>
 
-      <FadeIn delay={0.3} className="mt-4">
+      <FadeIn delay={0.27} className="mt-4">
+        <ProofCard />
+      </FadeIn>
+
+      <FadeIn delay={0.33} className="mt-4">
         <ComputationPanel metric={metric} />
       </FadeIn>
     </div>

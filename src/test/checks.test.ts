@@ -111,3 +111,11 @@ describe("server-rendered numbers", () => {
     expect(html).not.toContain("$0.00");
   });
 });
+
+describe("real proof from Slussen", () => {
+  it("quotes the verified Cortex Analyst and Power BI figures", async () => {
+    const { slussenProof } = await import("@/data/proof");
+    expect(slussenProof.figures.map((f) => f.value)).toEqual(["409,522.85", "1,840", "222.57"]);
+    expect(slussenProof.questionsMatched).toBe(slussenProof.questionsAsked);
+  });
+});
