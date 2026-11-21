@@ -2,6 +2,8 @@
 
 Metrics that people and AI agents read the same way.
 
+**Live app:** https://agent-ready-semantic-metrics.lovable.app/
+
 At a growing number of companies the first reader of a metric is not a person on a dashboard. It is an AI agent answering someone's question. If "revenue" means one thing in the dashboard and another thing to the agent, the agent gives a confident wrong answer to everyone who asks.
 
 This app shows the fix in four pages: write every metric down once, test it against the data and make both the dashboard and the agent read that one definition.

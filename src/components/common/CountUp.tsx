@@ -1,10 +1,16 @@
 import { animate, useReducedMotion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type { MetricFormat } from "@/data/metrics";
 import { formatValue } from "@/lib/semantic";
 
-/** Animates from the previous value to the new one. Final frame is the exact value. */
+const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
+
+/**
+ * Renders the exact value on the server and in the first render, so the HTML never shows a
+ * placeholder. In the browser it then counts up from zero once, and from the previous value
+ * on every change after that. Final frame is always the exact value.
+ */
 export function CountUp({
   value,
   format,
@@ -15,16 +21,17 @@ export function CountUp({
   className?: string;
 }) {
   const reduce = useReducedMotion();
-  const [display, setDisplay] = useState(reduce ? value : 0);
-  const from = useRef(reduce ? value : 0);
+  const [display, setDisplay] = useState(value);
+  const from = useRef<number | null>(null);
 
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (reduce) {
       setDisplay(value);
       from.current = value;
       return;
     }
-    const controls = animate(from.current, value, {
+    const start = from.current ?? 0;
+    const controls = animate(start, value, {
       duration: 1,
       ease: [0.22, 1, 0.36, 1],
       onUpdate: setDisplay,

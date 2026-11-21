@@ -98,3 +98,16 @@ describe("bug lab", () => {
     expect(zeros.inProduction.correct).toContain("0.47%");
   });
 });
+
+describe("server-rendered numbers", () => {
+  it("CountUp renders the exact value in its first render, never a zero placeholder", async () => {
+    const { renderToString } = await import("react-dom/server");
+    const { createElement } = await import("react");
+    const { CountUp } = await import("@/components/common/CountUp");
+    const html = renderToString(
+      createElement(CountUp, { value: dashboardTile("net_revenue").value, format: "currency" }),
+    );
+    expect(html).toContain("$687,203");
+    expect(html).not.toContain("$0.00");
+  });
+});
