@@ -10,33 +10,63 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BugsRouteImport } from './routes/bugs'
+import { Route as CatalogRouteImport } from './routes/catalog'
+import { Route as LineageRouteImport } from './routes/lineage'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BugsRoute = BugsRouteImport.update({
+  id: '/bugs',
+  path: '/bugs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CatalogRoute = CatalogRouteImport.update({
+  id: '/catalog',
+  path: '/catalog',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LineageRoute = LineageRouteImport.update({
+  id: '/lineage',
+  path: '/lineage',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/bugs': typeof BugsRoute
+  '/catalog': typeof CatalogRoute
+  '/lineage': typeof LineageRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/bugs': typeof BugsRoute
+  '/catalog': typeof CatalogRoute
+  '/lineage': typeof LineageRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/bugs': typeof BugsRoute
+  '/catalog': typeof CatalogRoute
+  '/lineage': typeof LineageRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/bugs' | '/catalog' | '/lineage'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/bugs' | '/catalog' | '/lineage'
+  id: '__root__' | '/' | '/bugs' | '/catalog' | '/lineage'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BugsRoute: typeof BugsRoute
+  CatalogRoute: typeof CatalogRoute
+  LineageRoute: typeof LineageRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +78,35 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/bugs': {
+      id: '/bugs'
+      path: '/bugs'
+      fullPath: '/bugs'
+      preLoaderRoute: typeof BugsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/catalog': {
+      id: '/catalog'
+      path: '/catalog'
+      fullPath: '/catalog'
+      preLoaderRoute: typeof CatalogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lineage': {
+      id: '/lineage'
+      path: '/lineage'
+      fullPath: '/lineage'
+      preLoaderRoute: typeof LineageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BugsRoute: BugsRoute,
+  CatalogRoute: CatalogRoute,
+  LineageRoute: LineageRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
